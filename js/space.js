@@ -1,11 +1,11 @@
-// space.js - initialize Three.js scene when entering the space experience
-// This module dynamically imports Three.js from /libs/three/three.module.js
+// Updated space.js - integrate Earth creation into the Three.js scene
 import { createStars } from './stars.js';
 
 let renderer = null;
 let scene = null;
 let camera = null;
 let starsObj = null;
+let earthObj = null;
 let canvasEl = null;
 let animationId = null;
 let lastTime = 0;
@@ -52,6 +52,17 @@ async function initThree(container){
   starsObj = createStars(THREE, { count: starCount, radius: 1600, innerRadius: 300, size: 1.6 });
   scene.add(starsObj.points);
 
+  // attempt to create Earth
+  try{
+    const earthMod = await import('./earth.js');
+    earthObj = earthMod.createEarth(THREE, { radius: 100, rotationSpeed: 0.02 });
+    scene.add(earthObj.group);
+    // position earth slightly off center for cinematic composition
+    earthObj.group.position.set(0, -10, 0);
+  }catch(err){
+    console.warn('Earth module failed to load or init', err);
+  }
+
   window.addEventListener('resize', onResize);
 
   lastTime = performance.now();
@@ -75,8 +86,11 @@ function animate(now){
 
   if(starsObj && typeof starsObj.update === 'function'){
     starsObj.update(now * 0.001);
-    // small rotation for cinematic feeling
     starsObj.points.rotation.y += 0.0006;
+  }
+
+  if(earthObj && typeof earthObj.update === 'function'){
+    earthObj.update(delta);
   }
 
   if(renderer && scene && camera) renderer.render(scene, camera);
@@ -85,6 +99,11 @@ function animate(now){
 function destroyThree(){
   cancelAnimationFrame(animationId);
   window.removeEventListener('resize', onResize);
+  if(earthObj){
+    if(earthObj.group && earthObj.group.parent) earthObj.group.parent.remove(earthObj.group);
+    earthObj.dispose();
+    earthObj = null;
+  }
   if(starsObj){
     if(starsObj.points.parent) starsObj.points.parent.remove(starsObj.points);
     starsObj.dispose();
