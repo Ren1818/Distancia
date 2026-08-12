@@ -1,0 +1,26 @@
+/* global.css - layout básico */
+@import './variables.css';
+
+body{
+  background: radial-gradient(1200px 600px at 10% 10%, rgba(10,15,30,0.35), transparent), linear-gradient(180deg, var(--bg) 0%, var(--bg-2) 100%);
+  min-height:100vh;
+  -webkit-font-smoothing:antialiased;
+  -moz-osx-font-smoothing:grayscale;
+}
+
+.stage{
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  height:100vh;
+  width:100%;
+  padding:32px;
+}
+
+.intro{ text-align:center; width:100%; max-width:740px; margin:0 auto }
+.intro__hint{ color:var(--muted); margin-top:18px; font-size:15px }
+
+.pwa-install{ position:fixed; bottom:18px; right:18px }
+
+/* focus visible */
+[tabindex]:focus, button:focus { outline:2px solid var(--accent); outline-offset:3px }

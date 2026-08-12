@@ -1,0 +1,12 @@
+/* variables.css */
+:root{
+  --bg:#08070a;
+  --bg-2:#0f0d12;
+  --accent:#c09a6b;
+  --accent-2:#d46b7a;
+  --muted:#9a98a4;
+  --glass: rgba(255,255,255,0.06);
+  --glass-2: rgba(255,255,255,0.03);
+  --text:#fff6ee;
+  --shadow: 0 10px 30px rgba(0,0,0,0.6);
+}
