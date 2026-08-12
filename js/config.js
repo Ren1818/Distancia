@@ -1,4 +1,4 @@
-/* config.js - archivo central de configuración editable por el usuario */
+// config.js - archivo central de configuración editable por el usuario
 export const relationship = {
     // Fecha de inicio de la relación (modifica aquí si lo deseas)
     startDate: "2026-07-15T00:00:00"
@@ -9,9 +9,10 @@ AQUÍ ESCRIBIRÉ PERSONALMENTE MI CARTA.
 `;
 
 export const music = {
-    audio: "/assets/audio/cancion.mp3",
+    // Nombre exacto del archivo de audio según lo solicitado
+    audio: "/assets/audio/between-el-juego-y-la-vida.mp3",
     cover: "/assets/images/cover.svg",
-    title: "NOMBRE DE LA CANCIÓN",
+    title: "between-el-juego-y-la-vida",
     artist: "ARTISTA",
     lyrics: `
 AQUÍ COLOCARÉ LA LETRA
