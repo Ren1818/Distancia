@@ -1,5 +1,5 @@
 <?php
-// index.php - Fase 1/2/3: PWA scaffold, pantalla inicial con sobre, reproductor y contador (mínimo)
+// index.php - Fase 1/2/3/4: PWA scaffold, pantalla inicial con sobre, reproductor, contador y pregunta romántica
 // Mantener markup minimalista; la interacción avanza por fases mediante JS modular.
 
 ?><!doctype html>
@@ -18,6 +18,7 @@
     <link rel="stylesheet" href="/css/global.css">
     <link rel="stylesheet" href="/css/envelope.css">
     <link rel="stylesheet" href="/css/music.css">
+    <link rel="stylesheet" href="/css/question.css">
     <link rel="stylesheet" href="/css/responsive.css">
 
 </head>
@@ -91,5 +92,6 @@
     <script type="module" src="/js/pwa.js"></script>
     <script type="module" src="/js/counter.js"></script>
     <script type="module" src="/js/music.js"></script>
+    <script type="module" src="/js/loveQuestion.js"></script>
 </body>
 </html>

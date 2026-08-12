@@ -2,6 +2,7 @@
 import { createPuzzleModal } from './mathPuzzle.js';
 import { letterContent } from './config.js';
 import * as Letter from './letter.js';
+import LoveQuestion from './loveQuestion.js';
 
 const envelopeEl = document.getElementById('envelope');
 const sealEl = document.getElementById('seal');
@@ -83,6 +84,13 @@ function revealLetter(){
             letter.classList.add('opening');
             envelopeEl.classList.add('letter-open');
             // abrir contenido
+            // Show the love question after the letter is fully opened
+            setTimeout(()=>{
+              LoveQuestion.showQuestion();
+              // reveal counter UI
+              const counterEl = document.getElementById('counter');
+              if(counterEl){ counterEl.hidden = false; }
+            }, 360);
         },220);
     });
 }

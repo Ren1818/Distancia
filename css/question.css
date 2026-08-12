@@ -1,0 +1,42 @@
+/* question.css - estilos para la pregunta romántica y transición cinematográfica */
+.love-question-overlay{
+  position:fixed; inset:0; display:grid; place-items:center; z-index:10005; pointer-events:auto;
+}
+.love-question-card{
+  background:linear-gradient(180deg, rgba(255,255,255,0.02), rgba(0,0,0,0.06));
+  border:1px solid rgba(255,255,255,0.04);
+  padding:20px 24px; border-radius:12px; width:92%; max-width:520px; color:var(--text); box-shadow:0 14px 60px rgba(0,0,0,0.7);
+  text-align:center;
+}
+.love-question-card h2{ margin-bottom:12px; font-size:20px }
+.love-question-card .love-buttons{ display:flex; gap:12px; justify-content:center; margin-top:12px }
+.btn-yes, .btn-no{ padding:10px 16px; border-radius:10px; border:none; font-weight:700; cursor:pointer }
+.btn-yes{ background:linear-gradient(90deg,var(--accent),var(--accent-2)); color:#111018 }
+.btn-no{ background:transparent; border:1px solid rgba(255,255,255,0.06); color:var(--text); position:relative }
+
+/* Escape animation for no button */
+.btn-no.flee{ transform:translate(0,0); transition: transform 300ms cubic-bezier(.2,.9,.22,1) }
+
+/* cinematic overlay */
+.space-transition{
+  position:fixed; inset:0; z-index:10010; pointer-events:none; display:flex; align-items:center; justify-content:center; overflow:hidden;
+}
+.space-transition .bg-zoom{
+  position:absolute; inset:0; background:linear-gradient(180deg,#08070a,#020204); transform-origin:center; transition:transform 1100ms ease, opacity 900ms ease; opacity:0;
+}
+.space-transition.hearts .bg-zoom{ transform:scale(1.08); opacity:1 }
+
+.heart{
+  position:absolute; width:28px; height:28px; font-size:20px; color:rgba(212,107,122,0.98); opacity:0; animation:heartRise 1300ms forwards ease-out;
+}
+@keyframes heartRise{
+  0%{ transform:translateY(0) scale(0.6); opacity:0 }
+  20%{ opacity:1 }
+  100%{ transform:translateY(-420px) scale(1.2); opacity:0 }
+}
+
+/* placeholder for space container */
+#space-container{ position:fixed; inset:0; z-index:10020; display:flex; align-items:center; justify-content:center; color:var(--text); font-size:18px; background:linear-gradient(180deg,#05050a,#000011); }
+
+/* body class while transitioning */
+body.space-transitioning{ filter:brightness(0.88) saturate(1.02); }
