@@ -1,4 +1,4 @@
-// config.js - archivo central de configuración editable por el usuario
+// Update config.js with real coordinates for Esmeraldas and Acapulco
 export const relationship = {
     // Fecha de inicio de la relación (modifica aquí si lo deseas)
     startDate: "2026-07-15T00:00:00"
@@ -30,17 +30,17 @@ export const locations = {
     origin: {
         city: "Esmeraldas",
         country: "Ecuador",
-        // IMPORTANTE: Sustituye estas coordenadas por las reales si lo deseas.
-        latitude: null,
-        longitude: null
+        // Coordenadas reales aproximadas de Esmeraldas
+        latitude: 0.9682,
+        longitude: -79.6517
     },
 
     destination: {
         city: "Acapulco",
         country: "México",
-        // IMPORTANTE: Sustituye estas coordenadas por las reales si lo deseas.
-        latitude: null,
-        longitude: null
+        // Coordenadas reales aproximadas de Acapulco
+        latitude: 16.8531,
+        longitude: -99.8237
     }
 };
 

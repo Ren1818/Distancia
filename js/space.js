@@ -1,5 +1,6 @@
-// Updated space.js - integrate Earth creation into the Three.js scene
+// space.js - integrate flight route toggle on Earth click and manage route lifecycle
 import { createStars } from './stars.js';
+import { locations, settings } from './config.js';
 
 let renderer = null;
 let scene = null;
@@ -9,6 +10,8 @@ let earthObj = null;
 let canvasEl = null;
 let animationId = null;
 let lastTime = 0;
+let flightRoute = null;
+let THREE = null;
 
 function isWebGLAvailable(){
   try{
@@ -19,7 +22,7 @@ function isWebGLAvailable(){
 
 async function initThree(container){
   // dynamic import of local three module
-  const THREE = await import('/libs/three/three.module.js');
+  THREE = await import('/libs/three/three.module.js');
 
   scene = new THREE.Scene();
 
@@ -55,18 +58,48 @@ async function initThree(container){
   // attempt to create Earth
   try{
     const earthMod = await import('./earth.js');
-    earthObj = earthMod.createEarth(THREE, { radius: 100, rotationSpeed: 0.02 });
+    earthObj = earthMod.createEarth(THREE, { radius: 100, rotationSpeed: settings.earthRotationSpeed });
     scene.add(earthObj.group);
-    // position earth slightly off center for cinematic composition
     earthObj.group.position.set(0, -10, 0);
   }catch(err){
     console.warn('Earth module failed to load or init', err);
   }
 
+  // add interaction: click on earth toggles route
+  canvasEl.addEventListener('pointerdown', onPointerDown);
+
   window.addEventListener('resize', onResize);
 
   lastTime = performance.now();
   animate();
+}
+
+function onPointerDown(e){
+  if(!earthObj || !renderer || !camera || !THREE) return;
+  const rect = renderer.domElement.getBoundingClientRect();
+  const mouse = {
+    x: ((e.clientX - rect.left) / rect.width) * 2 - 1,
+    y: -((e.clientY - rect.top) / rect.height) * 2 + 1
+  };
+  const raycaster = new THREE.Raycaster();
+  raycaster.setFromCamera(mouse, camera);
+  const intersects = raycaster.intersectObject(earthObj.earthMesh, true);
+  if(intersects && intersects.length > 0){
+    // toggle route
+    if(flightRoute){
+      // dispose route
+      flightRoute.dispose && flightRoute.dispose();
+      const card = renderer.domElement.parentNode.querySelector('.route-info-card');
+      if(card) card.remove();
+      flightRoute = null;
+    } else {
+      // create route
+      import('./flightRoute.js').then(mod =>{
+        flightRoute = mod.createFlightRoute(THREE, scene, camera, renderer, earthObj.group, earthObj.radius, locations.origin, locations.destination, { routeHeight: settings.routeHeight });
+        const card = flightRoute.showInfoCard();
+      }).catch(err=>console.warn('Failed to create flight route', err));
+    }
+  }
 }
 
 function onResize(){
@@ -93,6 +126,10 @@ function animate(now){
     earthObj.update(delta);
   }
 
+  if(flightRoute && typeof flightRoute.update === 'function'){
+    flightRoute.update(delta);
+  }
+
   if(renderer && scene && camera) renderer.render(scene, camera);
 }
 
@@ -109,13 +146,17 @@ function destroyThree(){
     starsObj.dispose();
     starsObj = null;
   }
+  if(flightRoute){
+    flightRoute.dispose();
+    flightRoute = null;
+  }
   if(renderer){
     renderer.forceContextLoss && renderer.forceContextLoss();
     if(renderer.domElement && renderer.domElement.parentNode) renderer.domElement.parentNode.removeChild(renderer.domElement);
     renderer.dispose();
     renderer = null;
   }
-  scene = null; camera = null; canvasEl = null;
+  scene = null; camera = null; canvasEl = null; THREE = null;
 }
 
 function initFallback(container){
