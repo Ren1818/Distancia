@@ -1,4 +1,4 @@
-// space.js - integrate flight route toggle on Earth click and manage route lifecycle
+// space.js - init optimizations and UI toggle for route; device tier detection and lazy texture selection
 import { createStars } from './stars.js';
 import { locations, settings } from './config.js';
 
@@ -12,6 +12,7 @@ let animationId = null;
 let lastTime = 0;
 let flightRoute = null;
 let THREE = null;
+let btnToggle = null;
 
 function isWebGLAvailable(){
   try{
@@ -20,9 +21,30 @@ function isWebGLAvailable(){
   }catch(e){ return false; }
 }
 
+function detectDeviceTier(){
+  const hc = navigator.hardwareConcurrency || 4;
+  const mem = navigator.deviceMemory || 4; // in GB
+  const ua = navigator.userAgent || '';
+  const isMobile = /Mobi|Android/i.test(ua);
+
+  // heuristic scoring
+  let score = 0;
+  if(hc >= 8) score += 2; else if(hc >=4) score += 1;
+  if(mem >= 8) score +=2; else if(mem >=4) score +=1;
+  if(!isMobile) score +=1;
+
+  if(score >=5) return 'high';
+  if(score >=3) return 'medium';
+  return 'low';
+}
+
 async function initThree(container){
-  // dynamic import of local three module
   THREE = await import('/libs/three/three.module.js');
+
+  // device quality
+  const tier = detectDeviceTier();
+  const dpr = window.devicePixelRatio || 1;
+  let pixelRatio = Math.min(dpr, tier === 'high' ? 1.5 : (tier === 'medium' ? 1.2 : 0.9));
 
   scene = new THREE.Scene();
 
@@ -33,7 +55,7 @@ async function initThree(container){
   camera.position.set(0, 0, 400);
 
   renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
-  renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 1.5));
+  renderer.setPixelRatio(pixelRatio);
   renderer.setSize(width, height);
   renderer.outputEncoding = THREE.sRGBEncoding || THREE.LinearEncoding;
   renderer.domElement.style.width = '100%';
@@ -46,19 +68,15 @@ async function initThree(container){
   const ambient = new THREE.AmbientLight(0xffffff, 0.2);
   scene.add(ambient);
 
-  // create stars
-  const concurrency = navigator.hardwareConcurrency || 4;
-  let starCount = 900;
-  if(concurrency <= 2) starCount = 300;
-  else if(concurrency <= 4) starCount = 600;
-
-  starsObj = createStars(THREE, { count: starCount, radius: 1600, innerRadius: 300, size: 1.6 });
+  // choose star count based on tier
+  let starCount = (tier === 'high') ? 900 : ((tier === 'medium') ? 600 : 200);
+  starsObj = createStars(THREE, { count: starCount, radius: 1600, innerRadius: 300, size: tier === 'low' ? 1.0 : 1.6 });
   scene.add(starsObj.points);
 
-  // attempt to create Earth
+  // attempt to create Earth and pass texture path; createEarth async handles choosing small textures when available
   try{
     const earthMod = await import('./earth.js');
-    earthObj = earthMod.createEarth(THREE, { radius: 100, rotationSpeed: settings.earthRotationSpeed });
+    earthObj = await earthMod.createEarth(THREE, { radius: 100, rotationSpeed: settings.earthRotationSpeed, texturePath: '/assets/textures/earth/' });
     scene.add(earthObj.group);
     earthObj.group.position.set(0, -10, 0);
   }catch(err){
@@ -68,10 +86,48 @@ async function initThree(container){
   // add interaction: click on earth toggles route
   canvasEl.addEventListener('pointerdown', onPointerDown);
 
+  // add toggle button for accessibility and mobile
+  addRouteToggleButton(container);
+
   window.addEventListener('resize', onResize);
 
   lastTime = performance.now();
   animate();
+}
+
+function addRouteToggleButton(container){
+  if(btnToggle) return;
+  btnToggle = document.createElement('button');
+  btnToggle.id = 'btn-toggle-route';
+  btnToggle.textContent = 'Mostrar ruta';
+  btnToggle.setAttribute('aria-label','Mostrar ruta entre origen y destino');
+  btnToggle.addEventListener('click', ()=>{
+    toggleRoute();
+  });
+  btnToggle.addEventListener('keydown', (e)=>{ if(e.key === 'Enter' || e.key === ' ') { e.preventDefault(); toggleRoute(); } });
+  container.appendChild(btnToggle);
+}
+
+function removeRouteToggleButton(){
+  if(btnToggle && btnToggle.parentNode) btnToggle.parentNode.removeChild(btnToggle);
+  btnToggle = null;
+}
+
+function toggleRoute(){
+  if(flightRoute){
+    flightRoute.dispose && flightRoute.dispose();
+    const card = renderer.domElement.parentNode.querySelector('.route-info-card');
+    if(card) card.remove();
+    flightRoute = null;
+    if(btnToggle) btnToggle.textContent = 'Mostrar ruta';
+    return;
+  }
+  if(!earthObj || !renderer || !camera || !THREE) return;
+  import('./flightRoute.js').then(mod =>{
+    flightRoute = mod.createFlightRoute(THREE, scene, camera, renderer, earthObj.group, earthObj.radius, locations.origin, locations.destination, { routeHeight: settings.routeHeight });
+    const card = flightRoute.showInfoCard();
+    if(btnToggle) btnToggle.textContent = 'Ocultar ruta';
+  }).catch(err=>console.warn('Failed to create flight route', err));
 }
 
 function onPointerDown(e){
@@ -85,20 +141,8 @@ function onPointerDown(e){
   raycaster.setFromCamera(mouse, camera);
   const intersects = raycaster.intersectObject(earthObj.earthMesh, true);
   if(intersects && intersects.length > 0){
-    // toggle route
-    if(flightRoute){
-      // dispose route
-      flightRoute.dispose && flightRoute.dispose();
-      const card = renderer.domElement.parentNode.querySelector('.route-info-card');
-      if(card) card.remove();
-      flightRoute = null;
-    } else {
-      // create route
-      import('./flightRoute.js').then(mod =>{
-        flightRoute = mod.createFlightRoute(THREE, scene, camera, renderer, earthObj.group, earthObj.radius, locations.origin, locations.destination, { routeHeight: settings.routeHeight });
-        const card = flightRoute.showInfoCard();
-      }).catch(err=>console.warn('Failed to create flight route', err));
-    }
+    // toggle route via pointer
+    toggleRoute();
   }
 }
 
@@ -123,7 +167,7 @@ function animate(now){
   }
 
   if(earthObj && typeof earthObj.update === 'function'){
-    earthObj.update(delta);
+    earthObj.update(delta, camera);
   }
 
   if(flightRoute && typeof flightRoute.update === 'function'){
@@ -150,6 +194,7 @@ function destroyThree(){
     flightRoute.dispose();
     flightRoute = null;
   }
+  removeRouteToggleButton();
   if(renderer){
     renderer.forceContextLoss && renderer.forceContextLoss();
     if(renderer.domElement && renderer.domElement.parentNode) renderer.domElement.parentNode.removeChild(renderer.domElement);
@@ -160,7 +205,7 @@ function destroyThree(){
 }
 
 function initFallback(container){
-  // simple CSS/Canvas fallback: add a background and a 2D canvas with stars drawn
+  // improved fallback: show minimal route info overlay and simple canvas stars
   container.innerHTML = '';
   const bg = document.createElement('div');
   bg.style.position = 'absolute'; bg.style.inset = '0'; bg.style.background = 'radial-gradient(circle at 20% 20%, rgba(20,30,60,0.2), transparent), #000010';
@@ -186,6 +231,23 @@ function initFallback(container){
     requestAnimationFrame(draw);
   }
   draw();
+
+  // add a small accessible button to show route info (non-3D)
+  const infoBtn = document.createElement('button');
+  infoBtn.id = 'btn-toggle-route';
+  infoBtn.textContent = 'Mostrar ruta';
+  infoBtn.style.position = 'absolute'; infoBtn.style.right = '18px'; infoBtn.style.bottom = '18px';
+  infoBtn.addEventListener('click', ()=>{
+    alert('Esta es una versión simplificada sin WebGL. La distancia aproximada es: ' + Math.round( (function(){
+      // compute haversine quickly
+      function toRad(v){ return v * Math.PI/180; }
+      const o = locations.origin; const d = locations.destination;
+      const R = 6371; const dLat = toRad(d.latitude - o.latitude); const dLon = toRad(d.longitude - o.longitude);
+      const a = Math.sin(dLat/2)*Math.sin(dLat/2) + Math.cos(toRad(o.latitude))*Math.cos(toRad(d.latitude))*Math.sin(dLon/2)*Math.sin(dLon/2);
+      const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a)); return R*c;
+    })()) + ' km');
+  });
+  container.appendChild(infoBtn);
 }
 
 // Listen for entering space

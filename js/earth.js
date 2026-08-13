@@ -1,5 +1,6 @@
 // earth.js - creates a real 3D Earth with textures and a subtle atmosphere (shader)
-export function createEarth(THREE, options = {}){
+// Now uses async texture loading with small/large fallbacks to support low-tier devices.
+export async function createEarth(THREE, options = {}){
   const opts = Object.assign({
     radius: 100,
     widthSegments: 64,
@@ -9,16 +10,28 @@ export function createEarth(THREE, options = {}){
   }, options);
 
   const group = new THREE.Group();
-
   const loader = new THREE.TextureLoader();
-  const colorMap = loader.load(opts.texturePath + 'earth_color.jpg');
-  const normalMap = loader.load(opts.texturePath + 'earth_normal.jpg');
-  const roughnessMap = loader.load(opts.texturePath + 'earth_roughness.jpg');
-  const nightMap = loader.load(opts.texturePath + 'earth_night.jpg');
+
+  function loadTextureWithFallback(baseName){
+    return new Promise((resolve)=>{
+      const small = opts.texturePath + baseName + '_small.jpg';
+      const normal = opts.texturePath + baseName + '.jpg';
+      // try small first
+      loader.load(small, (tex)=>{ resolve(tex); }, undefined, ()=>{
+        // fallback to normal
+        loader.load(normal, (tex2)=>{ resolve(tex2); }, undefined, ()=>{ console.warn('Texture not found:', small, normal); resolve(null); });
+      });
+    });
+  }
+
+  const colorMap = await loadTextureWithFallback('earth_color');
+  const normalMap = await loadTextureWithFallback('earth_normal');
+  const roughnessMap = await loadTextureWithFallback('earth_roughness');
+  const nightMap = await loadTextureWithFallback('earth_night');
 
   // main earth material
   const earthMat = new THREE.MeshStandardMaterial({
-    map: colorMap,
+    map: colorMap || null,
     normalMap: normalMap || null,
     roughnessMap: roughnessMap || null,
     roughness: 1.0,
@@ -74,21 +87,24 @@ export function createEarth(THREE, options = {}){
   earthMesh.rotation.z = THREE.MathUtils.degToRad(0);
 
   // public update
-  function update(delta){
+  function update(delta, camera){
     // earth rotation
     earthMesh.rotation.y += delta * opts.rotationSpeed;
     // slowly rotate atmosphere differently for depth
     atmosphereMesh.rotation.y += delta * (opts.rotationSpeed * 0.96);
 
-    // update shader view vector (camera must set this from outside if needed)
+    // update shader view vector if camera provided
+    if(camera && atmosphereMat && atmosphereMat.uniforms && atmosphereMat.uniforms.viewVector){
+      atmosphereMat.uniforms.viewVector.value.copy(camera.position);
+    }
   }
 
   function dispose(){
     geom.dispose();
-    earthMat.map && earthMat.map.dispose();
-    earthMat.normalMap && earthMat.normalMap.dispose();
-    earthMat.roughnessMap && earthMat.roughnessMap.dispose();
-    earthMat.emissiveMap && earthMat.emissiveMap.dispose();
+    if(earthMat.map) { earthMat.map.dispose(); }
+    if(earthMat.normalMap) { earthMat.normalMap.dispose(); }
+    if(earthMat.roughnessMap) { earthMat.roughnessMap.dispose(); }
+    if(earthMat.emissiveMap) { earthMat.emissiveMap.dispose(); }
     earthMat.dispose();
     atmosphereGeom.dispose();
     atmosphereMat.dispose();
